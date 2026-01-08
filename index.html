@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabungan Harian Custom</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.box {
+    background: white;
+    padding: 20px;
+    width: 340px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.1);
+    text-align: center;
+}
+h2 {
+    margin-bottom: 10px;
+}
+input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+.progress {
+    background: #ddd;
+    border-radius: 20px;
+    overflow: hidden;
+    height: 20px;
+    margin: 15px 0;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #4CAF50;
+    transition: width .3s;
+}
+button {
+    border: none;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+.save { background: #2196F3; color: white; }
+.nabung { background: #4CAF50; color: white; }
+.reset { background: #e53935; color: white; }
+button:disabled { background: gray; }
+.info { font-size: 14px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="box">
+    <h2>💰 Tabungan Harian</h2>
+
+    <input type="number" id="harianInput" placeholder="Uang per hari (contoh 5000)">
+    <input type="number" id="targetInput" placeholder="Target tabungan (contoh 30000)">
+    <button class="save" onclick="simpanSetting()">Simpan Pengaturan</button>
+
+    <div class="progress">
+        <div class="progress-bar" id="bar"></div>
+    </div>
+
+    <p id="saldoText">Saldo: Rp0</p>
+    <p id="targetText">Target: Rp0</p>
+
+    <button class="nabung" id="btn" onclick="nabung()">Nabung Hari Ini</button>
+    <button class="reset" onclick="resetTabungan()">Reset Tabungan</button>
+
+    <div class="info" id="info"></div>
+</div>
+
+<script>
+let saldo = Number(localStorage.getItem("saldo")) || 0;
+let terakhir = localStorage.getItem("tanggal");
+
+let HARIAN = Number(localStorage.getItem("harian")) || 5000;
+let TARGET = Number(localStorage.getItem("target")) || 30000;
+
+document.getElementById("harianInput").value = HARIAN;
+document.getElementById("targetInput").value = TARGET;
+
+function simpanSetting() {
+    HARIAN = Number(document.getElementById("harianInput").value);
+    TARGET = Number(document.getElementById("targetInput").value);
+
+    if (HARIAN <= 0 || TARGET <= 0) {
+        alert("Nominal tidak valid!");
+        return;
+    }
+
+    localStorage.setItem("harian", HARIAN);
+    localStorage.setItem("target", TARGET);
+    updateUI();
+    alert("Pengaturan disimpan!");
+}
+
+function updateUI() {
+    document.getElementById("saldoText").innerText =
+        "Saldo: Rp" + saldo.toLocaleString();
+    document.getElementById("targetText").innerText =
+        "Target: Rp" + TARGET.toLocaleString();
+
+    let persen = Math.min((saldo / TARGET) * 100, 100);
+    document.getElementById("bar").style.width = persen + "%";
+
+    if (saldo >= TARGET) {
+        document.getElementById("btn").disabled = true;
+        document.getElementById("info").innerText = "🎉 Target tercapai!";
+    } else {
+        document.getElementById("btn").disabled = false;
+        document.getElementById("info").innerText = "";
+    }
+}
+
+function nabung() {
+    let hariIni = new Date().toDateString();
+    if (hariIni === terakhir) {
+        alert("Kamu sudah menabung hari ini!");
+        return;
+    }
+    saldo += HARIAN;
+    localStorage.setItem("saldo", saldo);
+    localStorage.setItem("tanggal", hariIni);
+    terakhir = hariIni;
+    updateUI();
+}
+
+function resetTabungan() {
+    if (confirm("Yakin ingin reset tabungan?")) {
+        saldo = 0;
+        terakhir = null;
+        localStorage.removeItem("saldo");
+        localStorage.removeItem("tanggal");
+        updateUI();
+    }
+}
+
+updateUI();
+
+/* === NOTIFIKASI HARIAN === */
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
+
+function pengingat() {
+    if (Notification.permission === "granted") {
+        new Notification("💰 Pengingat Menabung", {
+            body: "Jangan lupa nabung hari ini!",
+            icon: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png"
+        });
+    }
+}
+
+// Jam 08:00 pagi
+setInterval(() => {
+    let now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 0) {
+        pengingat();
+    }
+}, 60000);
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
